@@ -17,7 +17,6 @@ import {
   onSnapshot,
   query,
   orderBy,
-  serverTimestamp,
 } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 import { JournalEntry, UserProfile } from "../types";
@@ -33,6 +32,9 @@ googleProvider.setCustomParameters({
   prompt: "select_account",
 });
 
+// Admin email designation
+export const ADMIN_EMAIL = "ahteshammd94@gmail.com";
+
 export const signInWithGoogle = async (): Promise<User> => {
   const result = await signInWithPopup(auth, googleProvider);
   const user = result.user;
@@ -40,6 +42,7 @@ export const signInWithGoogle = async (): Promise<User> => {
   // Persist user profile node in Firestore with strict isolation
   try {
     const userDocRef = doc(db, "users", user.uid);
+    const role = user.email === ADMIN_EMAIL ? "admin" : "user";
     await setDoc(
       userDocRef,
       sanitizePayload({
@@ -47,6 +50,7 @@ export const signInWithGoogle = async (): Promise<User> => {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        role,
         lastLoginAt: Date.now(),
       }),
       { merge: true }
@@ -153,6 +157,7 @@ export const subscribeToUserEntries = (
           keyInsight: data.keyInsight || "",
           isFavorite: Boolean(data.isFavorite),
           wordCount: typeof data.wordCount === "number" ? data.wordCount : 0,
+          location: data.location || undefined,
           createdAt: typeof data.createdAt === "number" ? data.createdAt : Date.now(),
           updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : Date.now(),
         };

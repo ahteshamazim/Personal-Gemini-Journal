@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with federated auth identity and role metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "lastLoginAt": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "User-isolated multi-turn journal reflection entry with Gemini AI synthesis and optional location coordinates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "messages": { "type": "array" },
+        "summary": { "type": "string" },
+        "tags": { "type": "array" },
+        "sentiment": { "type": "string" },
+        "keyInsight": { "type": "string" },
+        "isFavorite": { "type": "boolean" },
+        "wordCount": { "type": "number" },
+        "location": { "type": "object" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Isolated user profile document"
+    },
+    "/users/{userId}/interactions/{interactionId}": {
+      "schema": "JournalEntry",
+      "description": "User-isolated reflection interactions subcollection"
+    }
+  }
+}

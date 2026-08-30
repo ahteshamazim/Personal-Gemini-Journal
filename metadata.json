@@ -1,6 +1,6 @@
 {
   "name": "Gemini Reflection & Journal Studio",
   "description": "A secure, user-authenticated reflection journal powered by Gemini 3.6 Flash and Cloud Firestore for multi-turn AI synthesis and persistent private reflection history.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

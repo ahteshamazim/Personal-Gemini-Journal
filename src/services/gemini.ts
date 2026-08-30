@@ -87,3 +87,51 @@ export const fetchPromptIdeas = async (
     ];
   }
 };
+
+export const fetchAdminHealthCheck = async () => {
+  const response = await fetch("/api/admin/health-check");
+  if (!response.ok) {
+    throw new Error("Failed to fetch system health diagnostic");
+  }
+  const data = await response.json();
+  return data.report;
+};
+
+export const generateWebhookPayload = async (
+  entry: any,
+  milestoneType: string,
+  userId: string
+) => {
+  const response = await fetch("/api/webhooks/generate-payload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ entry, milestoneType, userId }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to generate webhook payload");
+  }
+  const data = await response.json();
+  return data.payload;
+};
+
+export const testWebhookDispatch = async (
+  platform: string,
+  webhookUrl: string,
+  payload: any
+) => {
+  const response = await fetch("/api/webhooks/test-dispatch", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ platform, webhookUrl, payload }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to test webhook dispatch");
+  }
+  return await response.json();
+};

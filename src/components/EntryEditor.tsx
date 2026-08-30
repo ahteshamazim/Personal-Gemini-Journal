@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Send,
   Sparkles,
-  Bot,
-  User as UserIcon,
   Star,
   Tag,
   Trash2,
@@ -18,12 +16,14 @@ import {
   Copy,
   Check,
   ChevronRight,
-  Clock,
-  Flame,
+  MapPin,
+  Webhook,
 } from "lucide-react";
-import { JournalEntry, Message, PromptIdea, ReflectionMode } from "../types";
+import { JournalEntry, Message, PromptIdea, ReflectionMode, LocationTag } from "../types";
 import { requestReflection, fetchPromptIdeas } from "../services/gemini";
 import { saveJournalEntry, updateJournalEntry } from "../services/firebase";
+import { LocationPickerModal } from "./LocationPickerModal";
+import { WebhookModal } from "./WebhookModal";
 
 interface EntryEditorProps {
   userId: string;
@@ -89,6 +89,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
   const [sentiment, setSentiment] = useState<string>(activeEntry?.sentiment || "Balanced");
   const [keyInsight, setKeyInsight] = useState<string>(activeEntry?.keyInsight || "");
   const [isFavorite, setIsFavorite] = useState<boolean>(activeEntry?.isFavorite || false);
+  const [location, setLocation] = useState<LocationTag | undefined>(activeEntry?.location);
   const [createdAt, setCreatedAt] = useState<number>(activeEntry?.createdAt || Date.now());
 
   // Input & interaction state
@@ -99,6 +100,10 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [newTagInput, setNewTagInput] = useState<string>("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Modals state
+  const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
+  const [showWebhookModal, setShowWebhookModal] = useState<boolean>(false);
 
   // Prompt seeds drawer state
   const [promptIdeas, setPromptIdeas] = useState<PromptIdea[]>([]);
@@ -120,6 +125,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
       setSentiment(activeEntry.sentiment || "Balanced");
       setKeyInsight(activeEntry.keyInsight || "");
       setIsFavorite(activeEntry.isFavorite);
+      setLocation(activeEntry.location);
       setCreatedAt(activeEntry.createdAt);
       setErrorMessage(null);
     } else {
@@ -134,6 +140,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
       setSentiment("Balanced");
       setKeyInsight("");
       setIsFavorite(false);
+      setLocation(undefined);
       setCreatedAt(now);
       setInputText("");
       setErrorMessage(null);
@@ -171,6 +178,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
       sentiment?: string;
       keyInsight?: string;
       title?: string;
+      location?: LocationTag;
     }
   ) => {
     if (!userId) return;
@@ -194,6 +202,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
         keyInsight: overrideAnalysis?.keyInsight ?? keyInsight,
         isFavorite,
         wordCount: totalWords,
+        location: overrideAnalysis?.location !== undefined ? overrideAnalysis.location : location,
         createdAt,
         updatedAt: Date.now(),
       };
@@ -325,6 +334,11 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
     }
   };
 
+  const handleSaveLocation = (loc?: LocationTag) => {
+    setLocation(loc);
+    persistEntry(undefined, { location: loc });
+  };
+
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && newTagInput.trim()) {
       e.preventDefault();
@@ -396,8 +410,34 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
           </select>
         </div>
 
-        {/* Persistence & Action Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Location & Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Location Tag Pill */}
+          <button
+            onClick={() => setShowLocationModal(true)}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
+              location?.placeName
+                ? "border border-indigo-500/40 bg-indigo-600/20 text-indigo-300"
+                : "border border-white/10 bg-[#111111] text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+            title={location ? `Location: ${location.placeName}` : "Add Location Tag"}
+          >
+            <MapPin className="h-3.5 w-3.5 text-indigo-400" />
+            <span className="max-w-[120px] truncate">
+              {location?.placeName || "Add Location"}
+            </span>
+          </button>
+
+          {/* Webhook Schema Generator Button */}
+          <button
+            onClick={() => setShowWebhookModal(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#111111] px-3 py-1.5 text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            title="Generate Webhook Notification Schema"
+          >
+            <Webhook className="h-3.5 w-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Webhooks</span>
+          </button>
+
           {/* Persistence status */}
           <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-[#111111] border border-white/10">
             {saveStatus === "saving" && (
@@ -450,6 +490,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
                   sentiment,
                   keyInsight,
                   isFavorite,
+                  location,
                   wordCount: messages.reduce(
                     (a, m) => a + (m.content ? m.content.split(/\s+/).length : 0),
                     0
@@ -482,7 +523,7 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
         {/* Left Column: Multi-turn Chat / Reflection Stream */}
         <div className="flex flex-1 flex-col justify-between overflow-hidden bg-[#0a0a0a] rounded-2xl border border-white/10 shadow-2xl">
           {/* Executive Summary & Insight Banner (if available) */}
-          {(summary || keyInsight) && (
+          {(summary || keyInsight || location?.placeName) && (
             <div className="border-b border-white/10 bg-white/[0.02] p-4">
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shrink-0 mt-0.5">
@@ -499,6 +540,17 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
                     <p className="mt-1.5 text-white/90 leading-relaxed font-medium">
                       <span className="font-semibold text-emerald-400">Core Realization: </span>
                       {keyInsight}
+                    </p>
+                  )}
+                  {location?.placeName && (
+                    <p className="mt-1 text-[11px] text-white/50 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-indigo-400 inline" />
+                      <span>{location.placeName}</span>
+                      {location.latitude !== undefined && location.longitude !== undefined && (
+                        <span className="font-mono text-[10px] text-white/30">
+                          ({location.latitude.toFixed(2)}°, {location.longitude.toFixed(2)}°)
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -810,6 +862,42 @@ export const EntryEditor: React.FC<EntryEditorProps> = ({
           </div>
         )}
       </div>
+
+      {/* Location Picker Modal */}
+      {showLocationModal && (
+        <LocationPickerModal
+          initialLocation={location}
+          onSave={handleSaveLocation}
+          onClose={() => setShowLocationModal(false)}
+        />
+      )}
+
+      {/* Webhook Notification Schema Generator Modal */}
+      {showWebhookModal && (
+        <WebhookModal
+          entry={{
+            id: entryId || `entry-${Date.now()}`,
+            userId,
+            title,
+            category,
+            messages,
+            summary,
+            tags,
+            sentiment,
+            keyInsight,
+            isFavorite,
+            location,
+            wordCount: messages.reduce(
+              (a, m) => a + (m.content ? m.content.split(/\s+/).length : 0),
+              0
+            ),
+            createdAt,
+            updatedAt: Date.now(),
+          }}
+          userId={userId}
+          onClose={() => setShowWebhookModal(false)}
+        />
+      )}
     </div>
   );
 };

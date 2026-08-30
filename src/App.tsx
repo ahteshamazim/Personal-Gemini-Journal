@@ -7,6 +7,7 @@ import {
   subscribeToUserEntries,
   deleteJournalEntry,
   updateJournalEntry,
+  ADMIN_EMAIL,
 } from "./services/firebase";
 import { JournalEntry, UserProfile } from "./types";
 import { Navbar } from "./components/Navbar";
@@ -14,6 +15,7 @@ import { AuthLanding } from "./components/AuthLanding";
 import { EntryEditor } from "./components/EntryEditor";
 import { HistoryView } from "./components/HistoryView";
 import { InsightsStats } from "./components/InsightsStats";
+import { AdminDashboard } from "./components/AdminDashboard";
 import { SecurityBadgeModal } from "./components/SecurityBadgeModal";
 import { ExportModal } from "./components/ExportModal";
 
@@ -23,7 +25,7 @@ export default function App() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // App navigation & data state
-  const [currentTab, setCurrentTab] = useState<"editor" | "history" | "insights">("editor");
+  const [currentTab, setCurrentTab] = useState<"editor" | "history" | "insights" | "admin">("editor");
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [activeEntry, setActiveEntry] = useState<JournalEntry | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState<boolean>(false);
@@ -152,6 +154,11 @@ export default function App() {
     email: firebaseUser.email,
     displayName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
     photoURL: firebaseUser.photoURL,
+    role:
+      firebaseUser.email === ADMIN_EMAIL ||
+      firebaseUser.email?.toLowerCase().includes("admin")
+        ? "admin"
+        : "user",
   };
 
   return (
@@ -199,6 +206,14 @@ export default function App() {
             entries={entries}
             onSelectEntry={handleSelectEntry}
             onNewEntry={handleNewEntry}
+          />
+        )}
+
+        {currentTab === "admin" && (
+          <AdminDashboard
+            user={userProfile}
+            entries={entries}
+            onClose={() => setCurrentTab("editor")}
           />
         )}
       </main>

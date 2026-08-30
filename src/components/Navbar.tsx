@@ -1,11 +1,21 @@
 import React from "react";
-import { Sparkles, BookOpen, History, BarChart3, LogOut, ShieldCheck, Plus, BrainCircuit } from "lucide-react";
+import {
+  Sparkles,
+  BookOpen,
+  History,
+  BarChart3,
+  LogOut,
+  ShieldCheck,
+  Plus,
+  ShieldAlert,
+} from "lucide-react";
 import { UserProfile } from "../types";
+import { ADMIN_EMAIL } from "../services/firebase";
 
 interface NavbarProps {
   user: UserProfile;
-  currentTab: "editor" | "history" | "insights";
-  onTabChange: (tab: "editor" | "history" | "insights") => void;
+  currentTab: "editor" | "history" | "insights" | "admin";
+  onTabChange: (tab: "editor" | "history" | "insights" | "admin") => void;
   onNewEntry: () => void;
   onSignOut: () => void;
   onOpenSecurity: () => void;
@@ -21,6 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSecurity,
   savingStatus = "idle",
 }) => {
+  const isAdmin = user.role === "admin" || user.email === ADMIN_EMAIL;
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -112,6 +124,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BarChart3 className="h-3.5 w-3.5 text-indigo-400" />
             <span className="hidden sm:inline">Insights</span>
           </button>
+
+          {isAdmin && (
+            <button
+              id="nav-tab-admin"
+              onClick={() => onTabChange("admin")}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                currentTab === "admin"
+                  ? "bg-indigo-600/30 text-indigo-300 shadow-sm border border-indigo-500/30"
+                  : "text-indigo-400/60 hover:text-indigo-300 hover:bg-indigo-500/10"
+              }`}
+            >
+              <ShieldAlert className="h-3.5 w-3.5 text-indigo-400" />
+              <span>Admin</span>
+            </button>
+          )}
         </nav>
 
         {/* Action Controls & User Identity */}
